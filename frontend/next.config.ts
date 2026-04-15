@@ -1,22 +1,44 @@
 import type { NextConfig } from "next";
 
+const BACKEND_URL = process.env.NEXTAUTH_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+
 const nextConfig: NextConfig = {
   async rewrites() {
     return [
       // Backend API routes
       {
-        source: "/api/:path*",
-        destination: "http://localhost:8000/api/:path*",
+        source: "/api/keys/:path*",
+        destination: `${BACKEND_URL}/api/keys/:path*`,
       },
-      // Proxy routes — forwarded to backend (frontend test page hits these)
+      {
+        source: "/api/auth/google",
+        destination: `${BACKEND_URL}/api/auth/google`,
+      },
+      {
+        source: "/api/auth/me",
+        destination: `${BACKEND_URL}/api/auth/me`,
+      },
+      {
+        source: "/api/auth/wallet/:path*",
+        destination: `${BACKEND_URL}/api/auth/wallet/:path*`,
+      },
+      {
+        source: "/api/transactions",
+        destination: `${BACKEND_URL}/api/transactions`,
+      },
+      {
+        source: "/api/test/:path*",
+        destination: `${BACKEND_URL}/api/test/:path*`,
+      },
+      // Proxy routes
       {
         source: "/proxy/:path*",
-        destination: "http://localhost:8000/proxy/:path*",
+        destination: `${BACKEND_URL}/proxy/:path*`,
       },
       // Health check
       {
         source: "/health",
-        destination: "http://localhost:8000/health",
+        destination: `${BACKEND_URL}/health`,
       },
     ];
   },

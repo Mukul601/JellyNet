@@ -39,5 +39,13 @@ Thumbs.db
 *.swp
 *.swo
 
+# Example / template files (contain no secrets but not needed in repo)
+*.env.example
+.env.example
+
 # Test artifacts
 test_agent.py
+
+# Claude / AI assistant files
+CLAUDE.md
+.claude/
