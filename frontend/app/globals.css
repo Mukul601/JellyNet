@@ -1,0 +1,114 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+/* ── JellyNet Design Tokens ────────────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --background: #060b0f;
+  --surface: #0b1219;
+  --card: #0d151e;
+  --card-hover: #121d28;
+  --border: #1a2a38;
+  --border-subtle: #111e28;
+
+  /* JellyNet brand — teal */
+  --accent: #2dd4bf;
+  --accent-light: #5eead4;
+  --accent-dim: #134e4a;
+  --accent-glow: rgba(45, 212, 191, 0.15);
+
+  /* Semantics */
+  --success: #22c55e;
+  --success-dim: rgba(34, 197, 94, 0.1);
+  --warning: #f59e0b;
+  --warning-dim: rgba(245, 158, 11, 0.1);
+  --error: #ef4444;
+  --error-dim: rgba(239, 68, 68, 0.1);
+
+  /* Text */
+  --text-primary: #e0f2f1;
+  --text-secondary: #94a3b8;
+  --text-muted: #3d5a70;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── Selection ─────────────────────────────────────────────────────────────── */
+::selection { background: var(--accent-dim); color: var(--accent-light); }
+
+/* ── Animations ────────────────────────────────────────────────────────────── */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  50% { box-shadow: 0 0 24px 6px var(--accent-glow); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-fade-in   { animation: fade-in 0.3s ease-out forwards; }
+.animate-spin      { animation: spin 1s linear infinite; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+/* ── Landing utilities ─────────────────────────────────────────────────────── */
+.text-gradient {
+  background: linear-gradient(135deg, #2dd4bf, #6ee7b7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass {
+  background: rgba(13, 21, 30, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(45, 212, 191, 0.1);
+}
+
+.glow-border {
+  box-shadow: 0 0 20px -5px rgba(45, 212, 191, 0.3),
+              inset 0 0 20px -10px rgba(45, 212, 191, 0.1);
+}
+
+.glow-dot {
+  box-shadow: 0 0 12px 3px rgba(45, 212, 191, 0.6);
+}
+
+/* Container for landing components */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
