@@ -3,9 +3,12 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { signIn, useSession } from "next-auth/react";
+import { useMode } from "@/lib/contexts/ModeContext";
 
 export default function CTA() {
   const { data: session } = useSession();
+  const { mode } = useMode();
+  const appHome = mode === "agent" ? "/test" : "/dashboard";
 
   return (
     <section style={{ padding: "96px 0" }}>
@@ -73,7 +76,7 @@ export default function CTA() {
               }}
             >
               {session ? (
-                <Link href="/dashboard" style={{ textDecoration: "none" }}>
+                <Link href={appHome} style={{ textDecoration: "none" }}>
                   <button
                     className="glow-border"
                     style={{
@@ -88,13 +91,13 @@ export default function CTA() {
                       fontFamily: "'Space Grotesk', sans-serif",
                     }}
                   >
-                    ⚡ Open Dashboard
+                    ⚡ {mode === "agent" ? "Test the Flow" : "Open Dashboard"}
                   </button>
                 </Link>
               ) : (
                 <button
                   className="glow-border"
-                  onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+                  onClick={() => signIn("google", { callbackUrl: appHome })}
                   style={{
                     padding: "14px 32px",
                     borderRadius: "12px",

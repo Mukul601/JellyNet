@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { signIn, useSession } from "next-auth/react";
+import { useMode } from "@/lib/contexts/ModeContext";
 
 const navLinks = [
   { label: "How It Works", href: "#how-it-works" },
@@ -14,6 +15,8 @@ const navLinks = [
 export default function LandingNavbar() {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
+  const { mode } = useMode();
+  const appHome = mode === "agent" ? "/test" : "/dashboard";
 
   return (
     <motion.nav
@@ -91,7 +94,7 @@ export default function LandingNavbar() {
             </a>
           ))}
           {session ? (
-            <Link href="/dashboard" style={{ textDecoration: "none" }}>
+            <Link href={appHome} style={{ textDecoration: "none" }}>
               <button
                 style={{
                   padding: "8px 20px",
@@ -105,12 +108,12 @@ export default function LandingNavbar() {
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               >
-                Dashboard →
+                {mode === "agent" ? "Test Flow →" : "Dashboard →"}
               </button>
             </Link>
           ) : (
             <button
-              onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+              onClick={() => signIn("google", { callbackUrl: appHome })}
               style={{
                 padding: "8px 20px",
                 borderRadius: "8px",
@@ -177,9 +180,9 @@ export default function LandingNavbar() {
             onClick={() => {
               setOpen(false);
               if (session) {
-                window.location.href = "/dashboard";
+                window.location.href = appHome;
               } else {
-                signIn("google", { callbackUrl: "/dashboard" });
+                signIn("google", { callbackUrl: appHome });
               }
             }}
             style={{
