@@ -37,11 +37,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      session.backendToken = token.backendToken as string | undefined;
-      session.userId = token.userId as string | undefined;
-      session.hasWallet = token.hasWallet as boolean | undefined;
-      session.walletAddress = token.walletAddress as string | null | undefined;
-      session.walletIsGenerated = token.walletIsGenerated as boolean | undefined;
+      session.backendToken = token.backendToken as string;
+      session.userId = token.userId as string;
+      session.hasWallet = token.hasWallet as boolean;
+      session.walletAddress = token.walletAddress as string | null;
+      session.walletIsGenerated = token.walletIsGenerated as boolean;
       return session;
     },
   },

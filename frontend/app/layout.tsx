@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider as _SessionProvider } from "next-auth/react";
+const SessionProvider = _SessionProvider as React.ComponentType<{ children: React.ReactNode }>;
 import "./globals.css";
 import { ModeProvider } from "@/lib/contexts/ModeContext";
 import { NetworkProvider } from "@/lib/contexts/NetworkContext";

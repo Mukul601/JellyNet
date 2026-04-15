@@ -48,7 +48,7 @@ export interface TestStep {
 
 export interface TestRunResult {
   steps: TestStep[];
-  upstream_response: unknown;
+  upstream_response: Record<string, unknown> | string | null;
   tx_hash: string | null;
   explorer_url: string | null;
   success: boolean;
