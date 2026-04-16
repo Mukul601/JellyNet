@@ -91,7 +91,7 @@ export default function Hero() {
               }}
             />
             <span style={{ fontSize: "12px", fontWeight: "500", color: "var(--text-secondary)" }}>
-              Powered by Algorand x402 Protocol
+              Powered by x402 · USDC stablecoins
             </span>
           </div>
 

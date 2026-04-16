@@ -7,9 +7,9 @@ import { signIn, useSession } from "next-auth/react";
 import { useMode } from "@/lib/contexts/ModeContext";
 
 const navLinks = [
+  { label: "Marketplace", href: "/marketplace" },
   { label: "How It Works", href: "#how-it-works" },
   { label: "Features", href: "#features" },
-  { label: "Testimonials", href: "#testimonials" },
 ];
 
 export default function LandingNavbar() {

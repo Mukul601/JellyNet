@@ -57,28 +57,17 @@ class AlgorandService(PaymentChain):
 
     async def generate_address(self, endpoint_id: str) -> str:
         """
-        Generate a fresh Algorand keypair for this endpoint.
-        Stores only the address here — private key is logged ONCE to console.
-        Operator must manually fund this address and opt into USDC (ASA 10458941).
+        Generate a fresh keypair for this endpoint's earnings address.
+        Returns only the public address — private key is discarded after generation.
 
-        Production upgrade: derive deterministically from master key + endpoint_id
-        using BIP32/BIP44 path, keeping private key in secure vault.
+        NOTE: In the custodial payment model (Module 3), this method is replaced
+        by returning the platform master wallet address instead. Kept here for
+        backward compatibility during migration.
         """
         private_key, address = algo_account.generate_account()
-        logger.warning(
-            "\n"
-            "═══════════════════════════════════════════════════════════════\n"
-            " NEW ENDPOINT KEYPAIR — SAVE THE PRIVATE KEY SECURELY\n"
-            f" Endpoint ID : {endpoint_id}\n"
-            f" Address     : {address}\n"
-            f" Private Key : {private_key}\n"
-            f" Mnemonic    : {algo_mnemonic.from_private_key(private_key)}\n"
-            "\n"
-            " ACTION REQUIRED:\n"
-            f"  1. Fund with ALGO: https://bank.testnet.algorand.network/ → {address}\n"
-            f"  2. Opt in to USDC (ASA {self.usdc_asset_id}) via algokit or explorer\n"
-            "═══════════════════════════════════════════════════════════════\n"
-        )
+        # Private key intentionally discarded — custodial model handles payouts
+        # from platform wallet. Address stored as earnings destination only.
+        logger.info(f"Generated earnings address for endpoint {endpoint_id}: {address}")
         return address
 
     async def verify_payment(

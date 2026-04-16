@@ -5,6 +5,7 @@ import { NavLink } from "@/components/NavLink";
 import { ModeToggle } from "@/components/ModeToggle";
 import { NetworkBadge } from "@/components/NetworkBadge";
 import { UserMenu } from "@/components/UserMenu";
+import Footer from "@/components/landing/Footer";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -67,6 +68,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* Center nav */}
           <nav style={{ display: "flex", alignItems: "center", gap: "4px", flex: 1, justifyContent: "center" }}>
+            <NavLink href="/marketplace">Marketplace</NavLink>
             <NavLink href="/dashboard">Dashboard</NavLink>
             <NavLink href="/test">Test Flow</NavLink>
           </nav>
@@ -83,29 +85,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Page content */}
       <main>{children}</main>
 
-      {/* Footer */}
-      <footer
-        style={{
-          borderTop: "1px solid var(--border)",
-          padding: "24px",
-          textAlign: "center",
-          color: "var(--text-muted)",
-          fontSize: "13px",
-        }}
-      >
-        Built for{" "}
-        <span style={{ color: "var(--accent)" }}>AlgoBharat Hack Series 3.0</span>{" "}
-        · Powered by{" "}
-        <a
-          href="https://github.com/BofAI/x402"
-          target="_blank"
-          rel="noreferrer"
-          style={{ color: "var(--text-secondary)", textDecoration: "none" }}
-        >
-          x402
-        </a>{" "}
-        + Algorand
-      </footer>
+      <Footer />
     </>
   );
 }

@@ -17,9 +17,21 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
+  const [walletModalDismissed, setWalletModalDismissed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("walletModalDismissed") === "1";
+    }
+    return false;
+  });
+
   const token = session?.backendToken;
-  const needsWallet = session && !session.hasWallet;
+  const needsWallet = session && !session.hasWallet && !walletModalDismissed;
   const isLoggedIn = !!session;
+
+  function handleDismissWallet() {
+    sessionStorage.setItem("walletModalDismissed", "1");
+    setWalletModalDismissed(true);
+  }
 
   async function load() {
     try {
@@ -58,7 +70,7 @@ export default function Dashboard() {
   return (
     <>
       <MainnetOverlay />
-      {needsWallet && <WalletSetupModal onComplete={handleWalletComplete} />}
+      {needsWallet && <WalletSetupModal onComplete={handleWalletComplete} onDismiss={handleDismissWallet} />}
 
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "40px 24px" }}>
         {/* Header */}
@@ -78,7 +90,7 @@ export default function Dashboard() {
             </h1>
             <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
               {isLoggedIn
-                ? "Each key gets a unique x402-protected proxy endpoint on Algorand"
+                ? "Each key gets a unique x402-protected proxy endpoint — earn USDC per call"
                 : "Browse available x402-protected API endpoints · Sign in to start earning"}
             </p>
           </div>

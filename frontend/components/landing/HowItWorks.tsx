@@ -13,12 +13,12 @@ const steps = [
     emoji: "🔗",
     step: "02",
     title: "List On-Chain",
-    desc: "Your resource gets a unique Algorand-backed endpoint with x402 payment headers built in.",
+    desc: "Your resource gets a unique x402-protected proxy endpoint with payment headers built in.",
   },
   {
     emoji: "🪙",
     step: "03",
-    title: "Earn ALGO & USDC",
+    title: "Earn USDC",
     desc: "Every time an AI agent calls your endpoint, you get paid instantly. Watch earnings stack up in real-time.",
   },
 ];

@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from config import settings
+from config import settings as app_settings
 from database import get_db
 from middleware.auth_middleware import get_current_user
 from models.endpoint import Endpoint
@@ -38,25 +39,65 @@ router = APIRouter(prefix="/api", tags=["keys"])
 async def list_public_endpoints(
     request: Request,
     db: AsyncSession = Depends(get_db),
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    verified_only: bool = False,
+    min_price: Optional[int] = None,
+    max_price: Optional[int] = None,
+    sort_by: str = "newest",  # newest | price_asc | price_desc | health_desc
 ) -> List[SupplierWithEndpoints]:
-    """Public endpoint — returns all available endpoints for marketplace browsing (no auth)."""
-    result = await db.execute(
-        select(Supplier).options(selectinload(Supplier.endpoints))
-    )
+    """Public endpoint — returns all available endpoints for marketplace browsing (no auth).
+    Supports filtering by category, search query, verified status, and price range.
+    """
+    query = select(Supplier).options(selectinload(Supplier.endpoints))
+    result = await db.execute(query)
     suppliers = result.scalars().all()
 
     out = []
     for s in suppliers:
-        endpoints = [
-            _endpoint_to_schema(ep, _build_proxy_url(request, ep.id))
-            for ep in s.endpoints
-        ]
+        filtered_endpoints = []
+        for ep in s.endpoints:
+            # Category filter
+            if category and ep.category != category:
+                continue
+            # Verified filter
+            if verified_only and not ep.verified:
+                continue
+            # Price range filter
+            if min_price is not None and ep.min_price_usdca < min_price:
+                continue
+            if max_price is not None and ep.min_price_usdca > max_price:
+                continue
+            # Search filter (name, description, target_url)
+            if search:
+                q = search.lower()
+                searchable = " ".join(filter(None, [s.name, ep.description, ep.target_url])).lower()
+                if q not in searchable:
+                    continue
+            filtered_endpoints.append(ep)
+
+        if not filtered_endpoints:
+            continue
+
+        # Sort endpoints
+        if sort_by == "price_asc":
+            filtered_endpoints.sort(key=lambda e: e.min_price_usdca)
+        elif sort_by == "price_desc":
+            filtered_endpoints.sort(key=lambda e: e.min_price_usdca, reverse=True)
+        elif sort_by == "health_desc":
+            filtered_endpoints.sort(key=lambda e: e.health_score, reverse=True)
+        else:  # newest
+            filtered_endpoints.sort(key=lambda e: e.created_at, reverse=True)
+
         out.append(
             SupplierWithEndpoints(
                 supplier_id=s.id,
                 name=s.name,
                 created_at=s.created_at,
-                endpoints=endpoints,
+                endpoints=[
+                    _endpoint_to_schema(ep, _build_proxy_url(request, ep.id))
+                    for ep in filtered_endpoints
+                ],
             )
         )
     return out
@@ -88,7 +129,13 @@ def _endpoint_to_schema(ep: Endpoint, proxy_url: str = "") -> EndpointResponse:
         supplier_id=ep.supplier_id,
         target_url=ep.target_url,
         min_price_usdca=ep.min_price_usdca,
-        earnings_address=ep.earnings_address,
+        earnings_address=ep.earnings_address or "",
+        category=getattr(ep, "category", None) or "developer-tools",
+        description=getattr(ep, "description", None),
+        listing_type=getattr(ep, "listing_type", None) or "api",
+        rpm_limit=getattr(ep, "rpm_limit", None) or 60,
+        health_score=getattr(ep, "health_score", None) or 85,
+        verified=getattr(ep, "verified", False) or False,
         call_count=ep.call_count,
         total_earned_usdca=ep.total_earned_usdca,
         proxy_url=proxy_url,
@@ -101,7 +148,6 @@ def _endpoint_to_schema(ep: Endpoint, proxy_url: str = "") -> EndpointResponse:
 @router.post("/keys", response_model=SupplierResponse, status_code=201)
 async def create_supplier(
     body: SupplierCreate,
-    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> SupplierResponse:
@@ -121,9 +167,8 @@ async def create_supplier(
     )
     db.add(supplier)
 
-    # Also generate the first endpoint immediately
-    chain_service = request.app.state.chain_service
-    earnings_address = await chain_service.generate_address(str(uuid.uuid4()))
+    # Custodial model: all payments go to platform's master address
+    earnings_address = app_settings.platform_payment_address
 
     endpoint = Endpoint(
         id=str(uuid.uuid4()),
@@ -131,6 +176,9 @@ async def create_supplier(
         target_url=body.target_url,
         min_price_usdca=body.min_price_usdca,
         earnings_address=earnings_address,
+        category=getattr(body, "category", "developer-tools"),
+        description=getattr(body, "description", None),
+        rpm_limit=getattr(body, "rpm_limit", 60),
         call_count=0,
         total_earned_usdca=0,
         created_at=datetime.utcnow(),
@@ -206,9 +254,9 @@ async def generate_endpoint(
     if existing_ep is None:
         raise HTTPException(status_code=404, detail="No endpoint found for supplier")
 
-    chain_service = request.app.state.chain_service
+    # Custodial model: all payments go to platform's master address
     endpoint_id = str(uuid.uuid4())
-    earnings_address = await chain_service.generate_address(endpoint_id)
+    earnings_address = app_settings.platform_payment_address
 
     endpoint = Endpoint(
         id=endpoint_id,
@@ -216,6 +264,9 @@ async def generate_endpoint(
         target_url=existing_ep.target_url,
         min_price_usdca=existing_ep.min_price_usdca,
         earnings_address=earnings_address,
+        category=existing_ep.category,
+        description=existing_ep.description,
+        rpm_limit=existing_ep.rpm_limit,
         call_count=0,
         total_earned_usdca=0,
         created_at=datetime.utcnow(),

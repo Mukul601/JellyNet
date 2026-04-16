@@ -29,7 +29,7 @@ const agents = [
   {
     icon: "🔒",
     title: "Trustless & Verifiable",
-    desc: "Every transaction is on-chain on Algorand. Transparent pricing, no vendor lock-in.",
+    desc: "Every transaction is verified on-chain. Transparent pricing, no vendor lock-in.",
   },
   {
     icon: "🗺️",

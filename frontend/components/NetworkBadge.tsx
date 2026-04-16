@@ -102,7 +102,7 @@ export function MainnetOverlay() {
           lineHeight: "1.6",
         }}
       >
-        JellyNet is currently live on <strong style={{ color: "var(--accent-light)" }}>Algorand Testnet</strong>.
+        JellyNet is currently live on <strong style={{ color: "var(--accent-light)" }}>Testnet</strong>.
         Mainnet launch is coming — switch back to Testnet to use all features now.
       </p>
       <button

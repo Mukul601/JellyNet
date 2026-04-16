@@ -8,7 +8,7 @@ import { NetworkProvider } from "@/lib/contexts/NetworkContext";
 export const metadata: Metadata = {
   title: "JellyNet — Agentic API Marketplace",
   description:
-    "Monetize API keys, bandwidth, and compute via x402 micropayments on Algorand. Built for AlgoBharat Hack Series 3.0.",
+    "Monetize API keys, bandwidth, and compute via x402 micropayments. Pay per call with USDC stablecoins.",
 };
 
 export default function RootLayout({

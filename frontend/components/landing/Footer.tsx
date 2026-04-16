@@ -1,7 +1,25 @@
-const links = {
-  Product: ["Marketplace", "Pricing", "Documentation", "API Reference"],
-  Company: ["About", "Blog", "Careers", "Contact"],
-  Legal: ["Privacy Policy", "Terms of Service", "Cookie Policy"],
+"use client";
+
+import Link from "next/link";
+
+const links: Record<string, { label: string; href: string }[]> = {
+  Product: [
+    { label: "Marketplace", href: "/marketplace" },
+    { label: "Documentation", href: "/docs" },
+    { label: "API Reference", href: "/docs#api-reference" },
+    { label: "Quick Start", href: "/docs#quick-start" },
+  ],
+  Company: [
+    { label: "About", href: "#" },
+    { label: "Blog", href: "#" },
+    { label: "GitHub", href: "#" },
+    { label: "Contact", href: "#" },
+  ],
+  Legal: [
+    { label: "Privacy Policy", href: "/legal/privacy" },
+    { label: "Terms of Service", href: "/legal/terms" },
+    { label: "Cookie Policy", href: "/legal/cookies" },
+  ],
 };
 
 export default function Footer() {
@@ -9,7 +27,7 @@ export default function Footer() {
     <footer
       style={{
         borderTop: "1px solid rgba(45,212,191,0.1)",
-        padding: "48px 0",
+        padding: "28px 0 20px",
       }}
     >
       <div className="container">
@@ -17,8 +35,8 @@ export default function Footer() {
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-            gap: "32px",
-            marginBottom: "48px",
+            gap: "24px",
+            marginBottom: "20px",
           }}
         >
           {/* Brand */}
@@ -53,7 +71,7 @@ export default function Footer() {
               </span>
             </div>
             <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
-              The Jelly Network — an agentic marketplace for unused digital resources. Powered by Algorand.
+              The Jelly Network — an agentic marketplace for API capacity. Powered by x402 micropayments.
             </p>
           </div>
 
@@ -73,9 +91,9 @@ export default function Footer() {
               </h4>
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                 {items.map((item) => (
-                  <li key={item} style={{ marginBottom: "8px" }}>
-                    <a
-                      href="#"
+                  <li key={item.label} style={{ marginBottom: "8px" }}>
+                    <Link
+                      href={item.href}
                       style={{
                         fontSize: "13px",
                         color: "var(--text-muted)",
@@ -85,8 +103,8 @@ export default function Footer() {
                       onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
                       onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
                     >
-                      {item}
-                    </a>
+                      {item.label}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -97,7 +115,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div
           style={{
-            paddingTop: "32px",
+            paddingTop: "16px",
             borderTop: "1px solid rgba(45,212,191,0.08)",
             display: "flex",
             flexWrap: "wrap",
@@ -110,17 +128,7 @@ export default function Footer() {
             © 2026 JellyNet. All rights reserved.
           </p>
           <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-            Built on <span style={{ color: "var(--accent)" }}>Algorand</span> · x402 Protocol ·{" "}
-            <a
-              href="https://algobharat.in"
-              target="_blank"
-              rel="noreferrer"
-              style={{ color: "var(--text-muted)", textDecoration: "none" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
-            >
-              AlgoBharat Hack Series 3.0
-            </a>
+            x402 Protocol · USDC stablecoins · Multi-chain
           </p>
         </div>
       </div>

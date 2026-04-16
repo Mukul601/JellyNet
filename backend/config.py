@@ -43,9 +43,14 @@ class Settings(BaseSettings):
     algo_algod_token: str = ""
     algo_indexer_server: str = "https://testnet-idx.algonode.cloud"
     algo_indexer_port: int = 443
-    # 25-word mnemonic for the master hot wallet that generates per-endpoint addresses
+    # 25-word mnemonic for the platform's master hot wallet (custodial model)
+    # All supplier earnings are collected here; payouts sent from here
     # Fund on testnet: https://bank.testnet.algorand.network/
     algo_master_mnemonic: str = ""
+    # Platform payment address — derived from algo_master_mnemonic at startup
+    # All endpoint earnings_address fields point to this address
+    # Set automatically in main.py; can also be overridden via env var
+    platform_payment_address: str = ""
     # USDC on Algorand testnet (ASA ID 10458941)
     algo_usdc_asset_id: int = 10458941
 

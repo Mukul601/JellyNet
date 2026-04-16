@@ -14,6 +14,9 @@ export function AddKeyForm({ token, onSuccess, onCancel }: Props) {
   const [apiKey, setApiKey] = useState("");
   const [targetUrl, setTargetUrl] = useState("https://api.openai.com");
   const [minPrice, setMinPrice] = useState(100);
+  const [category, setCategory] = useState("developer-tools");
+  const [description, setDescription] = useState("");
+  const [rpmLimit, setRpmLimit] = useState(60);
   const [showKey, setShowKey] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +32,9 @@ export function AddKeyForm({ token, onSuccess, onCancel }: Props) {
         api_key: apiKey,
         target_url: targetUrl,
         min_price_usdca: minPrice,
+        category,
+        description: description || undefined,
+        rpm_limit: rpmLimit,
       }, token);
       onSuccess();
     } catch (err) {
@@ -73,13 +79,14 @@ export function AddKeyForm({ token, onSuccess, onCancel }: Props) {
         </button>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} autoComplete="off">
         <Field label="NAME" hint="e.g. My OpenAI Key">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="My OpenAI Key"
             required
+            autoComplete="off"
             style={inputStyle}
           />
         </Field>
@@ -92,6 +99,7 @@ export function AddKeyForm({ token, onSuccess, onCancel }: Props) {
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="sk-..."
               required
+              autoComplete="new-password"
               style={{ ...inputStyle, paddingRight: "48px" }}
             />
             <button
@@ -134,6 +142,71 @@ export function AddKeyForm({ token, onSuccess, onCancel }: Props) {
             value={minPrice}
             onChange={(e) => setMinPrice(Number(e.target.value))}
             min={1}
+            required
+            style={inputStyle}
+          />
+        </Field>
+
+        <Field label="CATEGORY" hint="Helps buyers find your API">
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            style={{ ...inputStyle, cursor: "pointer" }}
+          >
+            <optgroup label="AI & Machine Learning">
+              <option value="ai-ml">AI / Machine Learning</option>
+              <option value="language-models">Language Models (LLMs)</option>
+              <option value="image-generation">Image Generation</option>
+              <option value="speech-audio">Speech & Audio</option>
+              <option value="computer-vision">Computer Vision</option>
+              <option value="embeddings">Embeddings</option>
+            </optgroup>
+            <optgroup label="Finance & Data">
+              <option value="finance">Finance</option>
+              <option value="crypto-data">Crypto Data</option>
+              <option value="market-data">Market Data</option>
+              <option value="data-analytics">Data & Analytics</option>
+            </optgroup>
+            <optgroup label="Web & Search">
+              <option value="search">Search</option>
+              <option value="web-scraping">Web Scraping</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option value="communication">Communication</option>
+              <option value="location-maps">Location & Maps</option>
+              <option value="weather">Weather</option>
+              <option value="commerce">Commerce</option>
+              <option value="media-content">Media & Content</option>
+              <option value="security-identity">Security & Identity</option>
+              <option value="developer-tools">Developer Tools</option>
+              <option value="health-wellness">Health & Wellness</option>
+              <option value="travel-transport">Travel & Transport</option>
+            </optgroup>
+          </select>
+        </Field>
+
+        <Field label="DESCRIPTION" hint="Optional — shown on marketplace">
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Proxies OpenAI's chat completions API with x402 payment protection..."
+            rows={2}
+            style={{
+              ...inputStyle,
+              resize: "vertical",
+              lineHeight: "1.5",
+              minHeight: "60px",
+            }}
+          />
+        </Field>
+
+        <Field label="RATE LIMIT (RPM)" hint="Max requests per minute">
+          <input
+            type="number"
+            value={rpmLimit}
+            onChange={(e) => setRpmLimit(Number(e.target.value))}
+            min={1}
+            max={10000}
             required
             style={inputStyle}
           />

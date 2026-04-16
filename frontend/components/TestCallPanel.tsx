@@ -148,7 +148,7 @@ export function TestCallPanel({ result }: Props) {
                   color: "var(--success)",
                 }}
               >
-                Payment Confirmed on Algorand
+                Payment Confirmed On-Chain
               </div>
               <div
                 style={{

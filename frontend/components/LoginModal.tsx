@@ -115,7 +115,7 @@ export function LoginModal() {
             lineHeight: "1.5",
           }}
         >
-          Built for AlgoBharat Hack Series 3.0 · Algorand testnet
+          Pay per call · USDC stablecoins · x402 protocol
         </p>
       </div>
     </div>

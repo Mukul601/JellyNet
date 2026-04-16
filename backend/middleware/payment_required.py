@@ -29,7 +29,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from models.endpoint import Endpoint
+from models.supplier import Supplier
 from models.transaction import Transaction
+from payments import service as payment_service
 
 
 async def require_payment(
@@ -130,6 +132,20 @@ async def require_payment(
     )
     db.add(tx)
     await db.commit()
+
+    # ── 10. Credit supplier balance (custodial model) ─────────────────────────
+    # Look up the supplier's user_id and credit their balance
+    supplier_result = await db.execute(
+        select(Supplier).where(Supplier.id == endpoint.supplier_id)
+    )
+    supplier = supplier_result.scalar_one_or_none()
+    if supplier:
+        await payment_service.credit_user(
+            db=db,
+            user_id=supplier.user_id,
+            amount_usdca=value,
+            tx_hash=tx_hash,
+        )
 
     # Store tx_hash in request state so the proxy route can confirm it after success
     request.state.tx_hash = tx_hash

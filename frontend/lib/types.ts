@@ -10,6 +10,14 @@ export interface Endpoint {
   target_url: string;
   min_price_usdca: number;
   earnings_address: string;
+  // Marketplace metadata
+  category: string;
+  description: string | null;
+  listing_type: string;
+  rpm_limit: number;
+  health_score: number;
+  verified: boolean;
+  // Stats
   call_count: number;
   total_earned_usdca: number;
   proxy_url: string;
@@ -68,4 +76,50 @@ export interface UserMe {
   has_wallet: boolean;
   wallet_address: string | null;
   wallet_is_generated: boolean;
+}
+
+// ── Payments ──────────────────────────────────────────────────────────────────
+
+export interface UserBalance {
+  user_id: string;
+  balance_usdca: number;
+  pending_withdrawal_usdca: number;
+  available_usdca: number;
+  balance_usdc: number;
+  available_usdc: number;
+}
+
+export interface WithdrawalRequest {
+  id: string;
+  user_id: string;
+  to_address: string;
+  amount_usdca: number;
+  chain: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  tx_hash: string | null;
+  created_at: string;
+  completed_at: string | null;
+  error: string | null;
+}
+
+// ── Marketplace ───────────────────────────────────────────────────────────────
+
+export interface SubCategory {
+  slug: string;
+  label: string;
+}
+
+export interface Category {
+  slug: string;
+  label: string;
+  subcategories: SubCategory[];
+}
+
+export interface MarketplaceFilters {
+  category?: string;
+  search?: string;
+  verified_only?: boolean;
+  min_price?: number;
+  max_price?: number;
+  sort_by?: "newest" | "price_asc" | "price_desc" | "health_desc";
 }

@@ -1,34 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 
 interface Props {
   onComplete: (address: string, isGenerated: boolean) => void;
+  onDismiss?: () => void;
 }
 
 type Tab = "generate" | "connect";
+type GenerateStep = "idle" | "loading" | "show_mnemonic" | "done";
 
-export function WalletSetupModal({ onComplete }: Props) {
+export function WalletSetupModal({ onComplete, onDismiss }: Props) {
   const { data: session } = useSession();
   const [tab, setTab] = useState<Tab>("generate");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   // Generate flow
-  const [generatedMnemonic, setGeneratedMnemonic] = useState("");
+  const [genStep, setGenStep] = useState<GenerateStep>("idle");
   const [generatedAddress, setGeneratedAddress] = useState("");
-  const [mnemonicCopied, setMnemonicCopied] = useState(false);
+  const [generatedMnemonic, setGeneratedMnemonic] = useState("");
   const [mnemonicConfirmed, setMnemonicConfirmed] = useState(false);
 
   // Connect flow
+  const [connectLoading, setConnectLoading] = useState(false);
+  const [peraConnecting, setPeraConnecting] = useState(false);
   const [addressInput, setAddressInput] = useState("");
 
   const token = session?.backendToken;
 
   async function handleGenerate() {
     if (!token) return;
-    setLoading(true);
+    setGenStep("loading");
     setError("");
     try {
       const res = await fetch("/api/auth/wallet/generate", {
@@ -36,27 +39,66 @@ export function WalletSetupModal({ onComplete }: Props) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail ?? "Failed to generate wallet");
+        let detail = "Failed to generate wallet";
+        try {
+          const d = await res.json();
+          detail = d.detail ?? detail;
+        } catch {}
+        if (res.status === 409) detail = "Wallet already exists on your account.";
+        if (res.status === 502 || res.status === 503 || res.status === 504) {
+          detail = "Backend service is unavailable. Make sure the backend is running.";
+        }
+        throw new Error(detail);
       }
       const data = await res.json();
-      setGeneratedMnemonic(data.mnemonic);
       setGeneratedAddress(data.address);
+      setGeneratedMnemonic(data.mnemonic ?? "");
+      setGenStep("show_mnemonic");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
+      if (e instanceof TypeError && e.message.includes("fetch")) {
+        setError("Cannot reach the backend. Check that the server is running.");
+      } else {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+      setGenStep("idle");
     }
   }
 
-  async function handleConnect() {
-    if (!token) return;
+  async function handleConnectPera() {
+    setPeraConnecting(true);
+    setError("");
+    try {
+      // Dynamic import to avoid SSR issues
+      const { PeraWalletConnect } = await import("@perawallet/connect");
+      const peraWallet = new PeraWalletConnect();
+      const accounts = await peraWallet.connect();
+      if (accounts && accounts.length > 0) {
+        const address = accounts[0];
+        await submitAddress(address);
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // User closed modal = not an error to show
+      if (!msg.toLowerCase().includes("closed") && !msg.toLowerCase().includes("cancelled")) {
+        setError("Wallet connect failed: " + msg);
+      }
+    } finally {
+      setPeraConnecting(false);
+    }
+  }
+
+  async function handleConnectManual() {
     const address = addressInput.trim();
     if (address.length !== 58) {
-      setError("Algorand address must be exactly 58 characters");
+      setError("Wallet address must be exactly 58 characters");
       return;
     }
-    setLoading(true);
+    await submitAddress(address);
+  }
+
+  const submitAddress = useCallback(async (address: string) => {
+    if (!token) return;
+    setConnectLoading(true);
     setError("");
     try {
       const res = await fetch("/api/auth/wallet/connect", {
@@ -68,22 +110,27 @@ export function WalletSetupModal({ onComplete }: Props) {
         body: JSON.stringify({ address }),
       });
       if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail ?? "Failed to connect wallet");
+        let detail = "Failed to save wallet address";
+        try {
+          const d = await res.json();
+          detail = d.detail ?? detail;
+        } catch {}
+        if (res.status === 502 || res.status === 503 || res.status === 504) {
+          detail = "Backend service is unavailable. Make sure the backend is running.";
+        }
+        throw new Error(detail);
       }
       onComplete(address, false);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (e instanceof TypeError && e.message.includes("fetch")) {
+        setError("Cannot reach the backend. Check that the server is running.");
+      } else {
+        setError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
-      setLoading(false);
+      setConnectLoading(false);
     }
-  }
-
-  function copyMnemonic() {
-    navigator.clipboard.writeText(generatedMnemonic);
-    setMnemonicCopied(true);
-    setTimeout(() => setMnemonicCopied(false), 2000);
-  }
+  }, [token, onComplete]);
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     flex: 1,
@@ -95,8 +142,10 @@ export function WalletSetupModal({ onComplete }: Props) {
     cursor: "pointer",
     transition: "all 0.15s",
     backgroundColor: active ? "var(--accent)" : "transparent",
-    color: active ? "white" : "var(--text-muted)",
+    color: active ? "#060b0f" : "var(--text-muted)",
   });
+
+  const mnemonicWords = generatedMnemonic ? generatedMnemonic.split(" ") : [];
 
   return (
     <div
@@ -111,23 +160,54 @@ export function WalletSetupModal({ onComplete }: Props) {
         zIndex: 100,
         padding: "16px",
       }}
+      onClick={onDismiss}
     >
       <div
+        onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: "var(--card)",
           border: "1px solid var(--border)",
           borderRadius: "20px",
           padding: "36px 32px",
-          maxWidth: "480px",
+          maxWidth: "500px",
           width: "100%",
           animation: "fade-in 0.3s ease-out",
+          position: "relative",
+          maxHeight: "90vh",
+          overflowY: "auto",
         }}
       >
+        {/* X close button */}
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            style={{
+              position: "absolute",
+              top: "16px",
+              right: "16px",
+              width: "32px",
+              height: "32px",
+              borderRadius: "50%",
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--surface)",
+              color: "var(--text-muted)",
+              fontSize: "18px",
+              lineHeight: 1,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            ×
+          </button>
+        )}
+
         <h2 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "6px", color: "var(--text-primary)" }}>
-          Set Up Your Algorand Wallet
+          Set Up Withdrawal Wallet
         </h2>
         <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "24px", lineHeight: "1.6" }}>
-          Your wallet is used to pay for API calls (Agent mode) and receive earnings (Supplier mode).
+          Optional — only needed to withdraw earnings. You can skip this and set it up later.
         </p>
 
         {/* Tab toggle */}
@@ -142,138 +222,139 @@ export function WalletSetupModal({ onComplete }: Props) {
           }}
         >
           <button style={tabStyle(tab === "generate")} onClick={() => { setTab("generate"); setError(""); }}>
-            Generate New Wallet
+            Generate New
           </button>
           <button style={tabStyle(tab === "connect")} onClick={() => { setTab("connect"); setError(""); }}>
-            Connect Existing
+            Connect Wallet
           </button>
         </div>
 
-        {/* Generate tab */}
+        {/* ─── Generate tab ─── */}
         {tab === "generate" && (
           <div>
-            {!generatedMnemonic ? (
+            {genStep === "idle" && (
               <>
                 <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "20px", lineHeight: "1.6" }}>
-                  We'll generate a fresh Algorand keypair. Your <strong>secret phrase will be shown once</strong> — save it somewhere safe. Only the public address is stored.
+                  We'll create a new crypto wallet for you. You'll receive a 25-word recovery phrase — save it somewhere safe. Your public address will be saved so you can withdraw earnings.
                 </p>
                 <button
                   onClick={handleGenerate}
-                  disabled={loading}
                   style={{
                     width: "100%",
                     padding: "13px",
                     borderRadius: "10px",
-                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                    color: "white",
+                    background: "linear-gradient(135deg, var(--accent), #0d9488)",
+                    color: "#060b0f",
                     fontSize: "15px",
                     fontWeight: "600",
                     border: "none",
-                    cursor: loading ? "not-allowed" : "pointer",
-                    opacity: loading ? 0.7 : 1,
+                    cursor: "pointer",
                   }}
                 >
-                  {loading ? "Generating…" : "Generate Wallet"}
+                  Generate Wallet
                 </button>
               </>
-            ) : (
-              <>
-                <div
-                  style={{
-                    backgroundColor: "var(--warning-dim, rgba(234,179,8,0.1))",
-                    border: "1px solid var(--warning, #eab308)",
-                    borderRadius: "10px",
-                    padding: "14px 16px",
-                    marginBottom: "16px",
-                  }}
-                >
-                  <p style={{ fontSize: "13px", fontWeight: "700", color: "var(--warning, #eab308)", marginBottom: "4px" }}>
-                    ⚠ Save this mnemonic — it will never be shown again
-                  </p>
-                  <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                    You need it to sign transactions if you run the standalone test agent.
-                  </p>
-                </div>
+            )}
 
-                <div
+            {genStep === "loading" && (
+              <div style={{ textAlign: "center", padding: "32px 0", color: "var(--text-muted)", fontSize: "14px" }}>
+                <span
                   style={{
-                    backgroundColor: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "10px",
-                    padding: "14px",
-                    fontFamily: "monospace",
-                    fontSize: "13px",
-                    color: "var(--text-secondary)",
-                    lineHeight: "1.8",
+                    display: "inline-block",
+                    width: "24px",
+                    height: "24px",
+                    border: "2px solid var(--border)",
+                    borderTopColor: "var(--accent)",
+                    borderRadius: "50%",
+                    animation: "spin 0.7s linear infinite",
                     marginBottom: "12px",
-                    wordBreak: "break-word",
+                  }}
+                />
+                <div>Generating wallet…</div>
+              </div>
+            )}
+
+            {genStep === "show_mnemonic" && (
+              <>
+                {/* Success address */}
+                <div
+                  style={{
+                    backgroundColor: "rgba(45,212,191,0.08)",
+                    border: "1px solid rgba(45,212,191,0.25)",
+                    borderRadius: "10px",
+                    padding: "12px 14px",
+                    marginBottom: "20px",
                   }}
                 >
-                  {generatedMnemonic}
+                  <p style={{ fontSize: "11px", fontWeight: "700", color: "var(--accent)", marginBottom: "4px" }}>
+                    ✓ Wallet created — Public Address
+                  </p>
+                  <p style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "monospace", wordBreak: "break-all" }}>
+                    {generatedAddress}
+                  </p>
                 </div>
 
-                <button
-                  onClick={copyMnemonic}
+                {/* Mnemonic phrase */}
+                <div
                   style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    backgroundColor: mnemonicCopied ? "var(--success-dim)" : "var(--surface)",
-                    color: mnemonicCopied ? "var(--success)" : "var(--text-secondary)",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    border: "1px solid var(--border)",
-                    cursor: "pointer",
+                    backgroundColor: "rgba(239,68,68,0.06)",
+                    border: "1px solid rgba(239,68,68,0.25)",
+                    borderRadius: "10px",
+                    padding: "16px",
                     marginBottom: "16px",
                   }}
                 >
-                  {mnemonicCopied ? "✓ Copied!" : "Copy Mnemonic"}
-                </button>
-
-                <div style={{ marginBottom: "20px" }}>
-                  <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "8px" }}>
-                    <strong style={{ color: "var(--text-secondary)" }}>Your wallet address:</strong> {generatedAddress}
+                  <p style={{ fontSize: "12px", fontWeight: "700", color: "var(--error)", marginBottom: "12px" }}>
+                    ⚠ Save your recovery phrase — shown only once
                   </p>
-                  <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                    Fund it before running test calls:
-                  </p>
-                  <div style={{ display: "flex", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
-                    {[
-                      { label: "Get ALGO", url: "https://bank.testnet.algorand.network/" },
-                      { label: "Get USDC", url: "https://usdcfaucet.com/" },
-                    ].map(({ label, url }) => (
-                      <a
-                        key={label}
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(5, 1fr)",
+                      gap: "6px",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {mnemonicWords.map((word, i) => (
+                      <div
+                        key={i}
                         style={{
-                          fontSize: "12px",
-                          padding: "4px 10px",
+                          backgroundColor: "var(--surface)",
+                          border: "1px solid var(--border)",
                           borderRadius: "6px",
-                          backgroundColor: "var(--accent-dim)",
-                          color: "var(--accent-light)",
-                          textDecoration: "none",
-                          fontWeight: "600",
+                          padding: "5px 4px",
+                          textAlign: "center",
                         }}
                       >
-                        {label} ↗
-                      </a>
+                        <span style={{ fontSize: "9px", color: "var(--text-muted)", display: "block" }}>
+                          {i + 1}
+                        </span>
+                        <span style={{ fontSize: "11px", color: "var(--text-primary)", fontWeight: "600" }}>
+                          {word}
+                        </span>
+                      </div>
                     ))}
                   </div>
                 </div>
 
+                {/* Confirm checkbox */}
                 <label
-                  style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", marginBottom: "16px" }}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "10px",
+                    cursor: "pointer",
+                    marginBottom: "20px",
+                  }}
                 >
                   <input
                     type="checkbox"
                     checked={mnemonicConfirmed}
                     onChange={(e) => setMnemonicConfirmed(e.target.checked)}
-                    style={{ width: "16px", height: "16px", accentColor: "var(--accent)" }}
+                    style={{ marginTop: "2px", accentColor: "var(--accent)", width: "16px", height: "16px" }}
                   />
-                  <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-                    I've saved my mnemonic phrase safely
+                  <span style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+                    I've saved my recovery phrase in a safe place. I understand it cannot be shown again.
                   </span>
                 </label>
 
@@ -285,33 +366,90 @@ export function WalletSetupModal({ onComplete }: Props) {
                     padding: "13px",
                     borderRadius: "10px",
                     background: mnemonicConfirmed
-                      ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                      ? "linear-gradient(135deg, var(--accent), #0d9488)"
                       : "var(--surface)",
-                    color: mnemonicConfirmed ? "white" : "var(--text-muted)",
+                    color: mnemonicConfirmed ? "#060b0f" : "var(--text-muted)",
                     fontSize: "15px",
                     fontWeight: "600",
                     border: "none",
                     cursor: mnemonicConfirmed ? "pointer" : "not-allowed",
                   }}
                 >
-                  Continue to JellyNet
+                  Continue →
                 </button>
               </>
             )}
           </div>
         )}
 
-        {/* Connect tab */}
+        {/* ─── Connect tab ─── */}
         {tab === "connect" && (
           <div>
-            <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "16px", lineHeight: "1.6" }}>
-              Enter your existing Algorand testnet address. Only the public key is stored — you'll need to provide your mnemonic when running test calls.
+            {/* Pera Wallet button */}
+            <button
+              onClick={handleConnectPera}
+              disabled={peraConnecting || connectLoading}
+              style={{
+                width: "100%",
+                padding: "14px",
+                borderRadius: "12px",
+                background: "linear-gradient(135deg, #FFEE55, #FFC800)",
+                color: "#1A1A1A",
+                fontSize: "15px",
+                fontWeight: "700",
+                border: "none",
+                cursor: peraConnecting || connectLoading ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+                marginBottom: "16px",
+                opacity: peraConnecting ? 0.7 : 1,
+              }}
+            >
+              {peraConnecting ? (
+                <>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: "16px",
+                      height: "16px",
+                      border: "2px solid rgba(0,0,0,0.2)",
+                      borderTopColor: "#1A1A1A",
+                      borderRadius: "50%",
+                      animation: "spin 0.7s linear infinite",
+                    }}
+                  />
+                  Connecting…
+                </>
+              ) : (
+                <>
+                  <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
+                    <rect width="40" height="40" rx="8" fill="#1A1A1A"/>
+                    <path d="M8 20C8 13.4 13.4 8 20 8C26.6 8 32 13.4 32 20C32 26.6 26.6 32 20 32" stroke="#FFEE55" strokeWidth="3" strokeLinecap="round"/>
+                    <circle cx="20" cy="20" r="4" fill="#FFEE55"/>
+                  </svg>
+                  Connect Pera Wallet
+                </>
+              )}
+            </button>
+
+            {/* Divider */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+              <div style={{ flex: 1, height: "1px", backgroundColor: "var(--border-subtle)" }} />
+              <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>or enter address manually</span>
+              <div style={{ flex: 1, height: "1px", backgroundColor: "var(--border-subtle)" }} />
+            </div>
+
+            {/* Manual address input */}
+            <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "12px", lineHeight: "1.6" }}>
+              Enter your public wallet address. Only the address is stored — used to send withdrawal payments to you.
             </p>
             <input
               type="text"
               value={addressInput}
               onChange={(e) => setAddressInput(e.target.value)}
-              placeholder="ALGO... (58 characters)"
+              placeholder="Your wallet address (58 characters)"
               style={{
                 width: "100%",
                 padding: "12px 14px",
@@ -327,24 +465,24 @@ export function WalletSetupModal({ onComplete }: Props) {
               }}
             />
             <button
-              onClick={handleConnect}
-              disabled={loading || addressInput.trim().length !== 58}
+              onClick={handleConnectManual}
+              disabled={connectLoading || addressInput.trim().length !== 58}
               style={{
                 width: "100%",
                 padding: "13px",
                 borderRadius: "10px",
                 background: addressInput.trim().length === 58
-                  ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                  ? "linear-gradient(135deg, var(--accent), #0d9488)"
                   : "var(--surface)",
-                color: addressInput.trim().length === 58 ? "white" : "var(--text-muted)",
+                color: addressInput.trim().length === 58 ? "#060b0f" : "var(--text-muted)",
                 fontSize: "15px",
                 fontWeight: "600",
                 border: "none",
-                cursor: loading || addressInput.trim().length !== 58 ? "not-allowed" : "pointer",
-                opacity: loading ? 0.7 : 1,
+                cursor: connectLoading || addressInput.trim().length !== 58 ? "not-allowed" : "pointer",
+                opacity: connectLoading ? 0.7 : 1,
               }}
             >
-              {loading ? "Connecting…" : "Connect Wallet"}
+              {connectLoading ? "Saving…" : "Save Address"}
             </button>
           </div>
         )}
@@ -363,6 +501,24 @@ export function WalletSetupModal({ onComplete }: Props) {
           >
             {error}
           </div>
+        )}
+
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            style={{
+              marginTop: "16px",
+              width: "100%",
+              padding: "10px",
+              background: "none",
+              border: "none",
+              color: "var(--text-muted)",
+              fontSize: "13px",
+              cursor: "pointer",
+            }}
+          >
+            Skip for now — set up wallet later
+          </button>
         )}
       </div>
     </div>

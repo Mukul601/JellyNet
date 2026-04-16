@@ -18,10 +18,22 @@ export default function TestPage() {
   const [result, setResult] = useState<TestRunResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [walletModalDismissed, setWalletModalDismissed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("walletModalDismissed") === "1";
+    }
+    return false;
+  });
+
   const token = session?.backendToken;
   const hasGeneratedWallet = session?.walletIsGenerated;
-  const needsWallet = session && !session.hasWallet;
+  const needsWallet = session && !session.hasWallet && !walletModalDismissed;
   const isLoggedIn = !!session;
+
+  function handleDismissWallet() {
+    sessionStorage.setItem("walletModalDismissed", "1");
+    setWalletModalDismissed(true);
+  }
 
   useEffect(() => {
     // Load endpoints for both logged-in and guest users
@@ -83,6 +95,7 @@ export default function TestPage() {
           onComplete={async (address, isGenerated) => {
             await updateSession({ hasWallet: true, walletAddress: address, walletIsGenerated: isGenerated });
           }}
+          onDismiss={handleDismissWallet}
         />
       )}
 
@@ -94,7 +107,7 @@ export default function TestPage() {
           </h1>
           <p style={{ color: "var(--text-secondary)", fontSize: "15px", lineHeight: "1.6" }}>
             Simulates a full AI agent interaction: sends a request, receives HTTP
-            402, pays on Algorand testnet, and retries with payment proof.
+            402, pays with USDC on testnet, and retries with payment proof.
           </p>
         </div>
 
@@ -115,7 +128,7 @@ export default function TestPage() {
             }}
           >
             <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-              👋 Sign in to run live test calls with your Algorand wallet.
+              👋 Sign in to run live test calls with your crypto wallet.
             </span>
             <button
               onClick={() => signIn("google", { callbackUrl: "/test" })}
@@ -293,7 +306,7 @@ export default function TestPage() {
             </h3>
             <ol style={{ color: "var(--text-secondary)", fontSize: "14px", lineHeight: "2", paddingLeft: "20px", margin: 0 }}>
               <li>Sign in with Google → your account is created automatically</li>
-              <li>Set up wallet (generate new OR connect existing Algorand address)</li>
+              <li>Set up wallet (generate new OR connect an existing address)</li>
               <li>
                 Fund your wallet with ALGO:{" "}
                 <a href="https://bank.testnet.algorand.network/" target="_blank" rel="noreferrer" style={{ color: "var(--accent-light)" }}>
